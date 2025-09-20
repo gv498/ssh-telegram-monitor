@@ -166,8 +166,22 @@ class SSH2FAHandler:
 
     def check_2fa_required(self, ip: str) -> bool:
         """Check if 2FA is required for this IP"""
-        # Always require 2FA for now
-        # Can be extended to check trusted IPs, etc.
+        # Check if 2FA is enabled
+        config_file = '/var/lib/ssh-monitor/2fa_config.json'
+        if os.path.exists(config_file):
+            try:
+                with open(config_file, 'r') as f:
+                    config = json.load(f)
+                    if not config.get('enabled', True):
+                        return False
+            except:
+                pass
+
+        # Check whitelist IPs
+        whitelist = os.getenv('2FA_WHITELIST_IPS', '').split(',')
+        if ip in whitelist:
+            return False
+
         return True
 
 async def handle_ssh_login(user: str, ip: str, pid: int):

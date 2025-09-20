@@ -252,6 +252,53 @@ class CallbackHandler:
                 "ודא שהבוט הוא מנהל ושהנושאים מופעלים בקבוצה."
             )
 
+    async def twofa_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /2fa command to toggle 2FA on/off"""
+        # Check if command is from authorized user (you can add user ID check here)
+
+        # Load current state
+        config_file = '/var/lib/ssh-monitor/2fa_config.json'
+        os.makedirs(os.path.dirname(config_file), exist_ok=True)
+
+        current_state = True  # Default is enabled
+        if os.path.exists(config_file):
+            try:
+                with open(config_file, 'r') as f:
+                    config = json.load(f)
+                    current_state = config.get('enabled', True)
+            except:
+                pass
+
+        # Toggle state
+        new_state = not current_state
+
+        # Save new state
+        with open(config_file, 'w') as f:
+            json.dump({'enabled': new_state}, f)
+
+        # Send response
+        if new_state:
+            await update.message.reply_text(
+                "🔐 **אימות דו-שלבי הופעל**\n\n"
+                "כל ניסיון התחברות SSH ידרוש אישור דרך טלגרם."
+            )
+            await self.manager.send_general_alert(
+                "אימות דו-שלבי הופעל",
+                "המערכת תדרוש אישור לכל התחברות SSH",
+                "success"
+            )
+        else:
+            await update.message.reply_text(
+                "⚠️ **אימות דו-שלבי כובה**\n\n"
+                "התחברויות SSH לא ידרשו אישור.\n"
+                "המערכת עדיין תשלח התראות."
+            )
+            await self.manager.send_general_alert(
+                "אימות דו-שלבי כובה",
+                "התחברויות SSH לא ידרשו יותר אישור",
+                "warning"
+            )
+
 def main():
     """Main function to run the bot"""
     handler = CallbackHandler()
@@ -263,6 +310,7 @@ def main():
     application.add_handler(CallbackQueryHandler(handler.handle_callback))
     application.add_handler(CommandHandler("start", handler.start_command))
     application.add_handler(CommandHandler("init", handler.init_command))
+    application.add_handler(CommandHandler("2fa", handler.twofa_command))
 
     # Run bot
     logger.info("Starting Telegram callback handler...")
