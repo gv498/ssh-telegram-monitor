@@ -140,12 +140,8 @@ class FailedAttemptsMonitor:
         if should_block:
             self.block_ip(ip)
 
-            # Send general alert
-            await self.manager.send_general_alert(
-                "חסימה אוטומטית הופעלה",
-                f"כתובת IP {ip} נחסמה אוטומטית לאחר {count} ניסיונות כושלים",
-                "warning"
-            )
+            # Send detailed block notification with unblock button
+            await self.manager.send_ip_blocked_alert(ip, user or 'unknown', count)
 
     async def monitor_auth_log(self):
         """Monitor /var/log/auth.log for failed attempts"""

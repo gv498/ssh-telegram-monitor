@@ -299,6 +299,32 @@ class TelegramGroupManager:
 
         await self.send_to_topic('general', full_message)
 
+    async def send_ip_blocked_alert(self, ip: str, user: str, attempts: int):
+        """Send IP blocked notification with unblock button"""
+        message = f"""🚫 **כתובת IP נחסמה אוטומטית**
+
+👤 משתמש אחרון: `{user}`
+🌐 כתובת IP: `{ip}`
+🔢 ניסיונות כושלים: {attempts}
+🕒 זמן חסימה: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
+
+הכתובת נחסמה בכל השכבות:
+• iptables
+• UFW
+• Fail2ban
+• חיבורים פעילים נותקו
+"""
+
+        keyboard = [
+            [
+                InlineKeyboardButton("🔓 בטל חסימה מיידית", callback_data=f"unblock:{ip}"),
+                InlineKeyboardButton("📊 הצג היסטוריה", callback_data=f"history:{ip}")
+            ]
+        ]
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await self.send_to_topic('failed_logins', message, reply_markup)
+
     async def initialize(self):
         """Initialize group, rename it, and create topics"""
         logger.info("Initializing Telegram group manager...")
