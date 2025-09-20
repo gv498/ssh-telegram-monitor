@@ -32,24 +32,24 @@ class TelegramGroupManager:
         # Topic names and descriptions
         self.topic_config = {
             'successful_logins': {
-                'name': '✅ Successful Logins',
-                'description': 'Successful SSH login notifications'
+                'name': '✅ התחברויות מוצלחות',
+                'description': 'התראות על התחברויות SSH מוצלחות'
             },
             'failed_logins': {
-                'name': '❌ Failed Logins',
-                'description': 'Failed SSH login attempts and auto-blocks'
+                'name': '❌ ניסיונות כושלים',
+                'description': 'ניסיונות התחברות כושלים וחסימות אוטומטיות'
             },
             'session_end': {
-                'name': '🚪 Session End',
-                'description': 'SSH session termination notifications'
+                'name': '🚪 סיום חיבור',
+                'description': 'התראות על סיום חיבורי SSH'
             },
             '2fa_approval': {
-                'name': '🔐 2FA Approval',
-                'description': 'Two-factor authentication approval requests'
+                'name': '🔐 אישור דו-שלבי',
+                'description': 'בקשות אישור לאימות דו-שלבי'
             },
             'general': {
-                'name': '📢 General',
-                'description': 'General system notifications and alerts'
+                'name': '📢 כללי',
+                'description': 'התראות כלליות של המערכת'
             }
         }
 
@@ -152,7 +152,7 @@ class TelegramGroupManager:
                         # Send initial message to topic
                         await self.send_to_topic(
                             topic_key,
-                            f"📌 **Topic: {config['name']}**\n\n{config['description']}"
+                            f"📌 **נושא: {config['name']}**\n\n{config['description']}"
                         )
                     except TelegramError as e:
                         logger.error(f"Failed to create topic {topic_key}: {e}")
@@ -186,23 +186,23 @@ class TelegramGroupManager:
 
     async def send_successful_login(self, user: str, ip: str, location: str, details: Dict):
         """Send successful login notification"""
-        message = f"""✅ **Successful SSH Login**
+        message = f"""✅ **התחברות SSH מוצלחת**
 
-👤 User: `{user}`
-🌐 IP: `{ip}`
-📍 Location: {location}
-🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+👤 משתמש: `{user}`
+🌐 כתובת IP: `{ip}`
+📍 מיקום: {location}
+🕒 זמן: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
 
-**System Info:**
-CPU: {details.get('cpu', 'N/A')}%
-Memory: {details.get('memory', 'N/A')}%
-Disk: {details.get('disk', 'N/A')}%
+**מידע מערכת:**
+מעבד: {details.get('cpu', 'לא זמין')}%
+זיכרון: {details.get('memory', 'לא זמין')}%
+דיסק: {details.get('disk', 'לא זמין')}%
 """
 
         keyboard = [
             [
-                InlineKeyboardButton("🚫 Block IP", callback_data=f"block:{ip}"),
-                InlineKeyboardButton("👁 View Sessions", callback_data=f"sessions:{ip}")
+                InlineKeyboardButton("🚫 חסום IP", callback_data=f"block:{ip}"),
+                InlineKeyboardButton("👁 הצג חיבורים", callback_data=f"sessions:{ip}")
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -211,29 +211,29 @@ Disk: {details.get('disk', 'N/A')}%
 
     async def send_failed_login(self, user: str, ip: str, attempts: int, blocked: bool = False):
         """Send failed login notification"""
-        status = "🚫 **AUTO-BLOCKED**" if blocked else "⚠️ Warning"
+        status = "🚫 **נחסם אוטומטית**" if blocked else "⚠️ אזהרה"
 
-        message = f"""❌ **Failed SSH Login Attempt**
+        message = f"""❌ **ניסיון התחברות SSH כושל**
 
-Status: {status}
-👤 User: `{user}`
-🌐 IP: `{ip}`
-🔢 Attempts: {attempts}
-🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+סטטוס: {status}
+👤 משתמש: `{user}`
+🌐 כתובת IP: `{ip}`
+🔢 ניסיונות: {attempts}
+🕒 זמן: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
 """
 
         if not blocked:
             keyboard = [
                 [
-                    InlineKeyboardButton("🚫 Block Now", callback_data=f"block:{ip}"),
-                    InlineKeyboardButton("📊 View History", callback_data=f"history:{ip}")
+                    InlineKeyboardButton("🚫 חסום עכשיו", callback_data=f"block:{ip}"),
+                    InlineKeyboardButton("📊 הצג היסטוריה", callback_data=f"history:{ip}")
                 ]
             ]
         else:
             keyboard = [
                 [
-                    InlineKeyboardButton("🔓 Unblock", callback_data=f"unblock:{ip}"),
-                    InlineKeyboardButton("📊 View History", callback_data=f"history:{ip}")
+                    InlineKeyboardButton("🔓 בטל חסימה", callback_data=f"unblock:{ip}"),
+                    InlineKeyboardButton("📊 הצג היסטוריה", callback_data=f"history:{ip}")
                 ]
             ]
 
@@ -242,38 +242,38 @@ Status: {status}
 
     async def send_session_end(self, user: str, ip: str, duration: str):
         """Send session end notification"""
-        message = f"""🚪 **SSH Session Ended**
+        message = f"""🚪 **חיבור SSH הסתיים**
 
-👤 User: `{user}`
-🌐 IP: `{ip}`
-⏱ Duration: {duration}
-🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+👤 משתמש: `{user}`
+🌐 כתובת IP: `{ip}`
+⏱ משך זמן: {duration}
+🕒 זמן: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
 """
 
         await self.send_to_topic('session_end', message)
 
     async def send_2fa_request(self, user: str, ip: str, location: str, session_id: str):
         """Send 2FA approval request"""
-        message = f"""🔐 **2FA Authentication Required**
+        message = f"""🔐 **נדרש אימות דו-שלבי**
 
-⚠️ SSH login attempt requires approval
+⚠️ ניסיון התחברות SSH דורש אישור
 
-👤 User: `{user}`
-🌐 IP: `{ip}`
-📍 Location: {location}
-🆔 Session: `{session_id}`
-🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+👤 משתמש: `{user}`
+🌐 כתובת IP: `{ip}`
+📍 מיקום: {location}
+🆔 מזהה חיבור: `{session_id}`
+🕒 זמן: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
 
-**This login will be blocked unless approved within 30 seconds**
+**ההתחברות תיחסם אם לא תאושר תוך 30 שניות**
 """
 
         keyboard = [
             [
-                InlineKeyboardButton("✅ Approve", callback_data=f"2fa_approve:{session_id}:{ip}"),
-                InlineKeyboardButton("❌ Deny", callback_data=f"2fa_deny:{session_id}:{ip}")
+                InlineKeyboardButton("✅ אשר", callback_data=f"2fa_approve:{session_id}:{ip}"),
+                InlineKeyboardButton("❌ דחה", callback_data=f"2fa_deny:{session_id}:{ip}")
             ],
             [
-                InlineKeyboardButton("🚫 Deny & Block", callback_data=f"2fa_block:{session_id}:{ip}")
+                InlineKeyboardButton("🚫 דחה וחסום", callback_data=f"2fa_block:{session_id}:{ip}")
             ]
         ]
 
@@ -320,8 +320,8 @@ Status: {status}
         if success:
             server_ip = self.get_server_ip()
             await self.send_general_alert(
-                "System Initialized",
-                f"SSH Telegram Monitor with 2FA is now active\n\nServer IP: {server_ip}\nGroup configured successfully",
+                "המערכת אותחלה",
+                f"מערכת ניטור SSH עם אימות דו-שלבי פעילה\n\nכתובת שרת: {server_ip}\nהקבוצה הוגדרה בהצלחה",
                 "success"
             )
         return success

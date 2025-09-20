@@ -43,13 +43,13 @@ class SSHNotifier:
             response = requests.get(f'http://ip-api.com/json/{ip}', timeout=2)
             data = response.json()
             if data.get('status') == 'success':
-                city = data.get('city', 'Unknown')
-                country = data.get('country', 'Unknown')
-                isp = data.get('isp', 'Unknown')
-                return f"{city}, {country} (ISP: {isp})"
+                city = data.get('city', 'לא ידוע')
+                country = data.get('country', 'לא ידוע')
+                isp = data.get('isp', 'לא ידוע')
+                return f"{city}, {country} (ספק: {isp})"
         except:
             pass
-        return "Unknown Location"
+        return "מיקום לא ידוע"
 
     def get_active_sessions(self) -> int:
         """Get count of active SSH sessions"""

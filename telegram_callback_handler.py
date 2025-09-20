@@ -102,18 +102,18 @@ class CallbackHandler:
             with open(blocked_file, 'w') as f:
                 json.dump(blocked_ips, f, indent=2)
 
-            await query.edit_message_text(f"✅ Successfully blocked IP: {ip}")
+            await query.edit_message_text(f"✅ כתובת ה-IP {ip} נחסמה בהצלחה")
 
             # Send notification to general topic
             await self.manager.send_general_alert(
-                "IP Blocked",
-                f"IP address {ip} has been blocked via Telegram",
+                "IP נחסם",
+                f"כתובת ה-IP {ip} נחסמה דרך טלגרם",
                 "warning"
             )
 
         except Exception as e:
             logger.error(f"Error blocking IP {ip}: {e}")
-            await query.edit_message_text(f"❌ Failed to block IP: {ip}")
+            await query.edit_message_text(f"❌ נכשל בחסימת IP: {ip}")
 
     async def unblock_ip(self, query, ip: str):
         """Unblock an IP address"""
@@ -136,18 +136,18 @@ class CallbackHandler:
                 except:
                     pass
 
-            await query.edit_message_text(f"✅ Successfully unblocked IP: {ip}")
+            await query.edit_message_text(f"✅ כתובת ה-IP {ip} שוחררה מחסימה בהצלחה")
 
             # Send notification to general topic
             await self.manager.send_general_alert(
-                "IP Unblocked",
-                f"IP address {ip} has been unblocked via Telegram",
+                "IP שוחרר",
+                f"כתובת ה-IP {ip} שוחררה מחסימה דרך טלגרם",
                 "success"
             )
 
         except Exception as e:
             logger.error(f"Error unblocking IP {ip}: {e}")
-            await query.edit_message_text(f"❌ Failed to unblock IP: {ip}")
+            await query.edit_message_text(f"❌ נכשל בביטול חסימת IP: {ip}")
 
     async def show_sessions(self, query, ip: str):
         """Show active SSH sessions from an IP"""
@@ -157,15 +157,15 @@ class CallbackHandler:
             sessions = result.stdout.strip()
 
             if sessions:
-                message = f"Active SSH sessions from {ip}:\n\n{sessions}"
+                message = f"חיבורי SSH פעילים מ-{ip}:\n\n{sessions}"
             else:
-                message = f"No active SSH sessions from {ip}"
+                message = f"אין חיבורי SSH פעילים מ-{ip}"
 
             await query.edit_message_text(message)
 
         except Exception as e:
             logger.error(f"Error showing sessions: {e}")
-            await query.edit_message_text("❌ Failed to get session information")
+            await query.edit_message_text("❌ נכשל בקבלת מידע על החיבורים")
 
     async def show_history(self, query, ip: str):
         """Show login history for an IP"""
@@ -182,16 +182,16 @@ class CallbackHandler:
 
             if ip in attempts:
                 count = attempts[ip].get('count', 0)
-                last = attempts[ip].get('last_attempt', 'Unknown')
-                message = f"Login history for {ip}:\n\nFailed attempts: {count}\nLast attempt: {last}"
+                last = attempts[ip].get('last_attempt', 'לא ידוע')
+                message = f"היסטוריית כניסות עבור {ip}:\n\nניסיונות כושלים: {count}\nניסיון אחרון: {last}"
             else:
-                message = f"No failed login attempts recorded for {ip}"
+                message = f"לא נרשמו ניסיונות כניסה כושלים עבור {ip}"
 
             await query.edit_message_text(message)
 
         except Exception as e:
             logger.error(f"Error showing history: {e}")
-            await query.edit_message_text("❌ Failed to get history information")
+            await query.edit_message_text("❌ נכשל בקבלת היסטוריית כניסות")
 
     async def approve_2fa(self, query, session_id: str, ip: str, status: str):
         """Handle 2FA approval/denial"""
@@ -201,17 +201,18 @@ class CallbackHandler:
 
             # Update message
             emoji = {'approved': '✅', 'denied': '❌', 'blocked': '🚫'}.get(status, '❓')
-            action_text = {'approved': 'approved', 'denied': 'denied', 'blocked': 'denied and blocked'}.get(status)
+            action_text = {'approved': 'אושרה', 'denied': 'נדחתה', 'blocked': 'נדחתה ונחסמה'}.get(status)
 
             await query.edit_message_text(
-                f"{emoji} Login from {ip} has been {action_text}\n"
-                f"Session ID: {session_id}"
+                f"{emoji} כניסה מ-{ip} {action_text}\n"
+                f"מזהה חיבור: {session_id}"
             )
 
             # Send notification to general topic
+            status_heb = {'approved': 'אושר', 'denied': 'נדחה', 'blocked': 'נחסם'}.get(status, status)
             await self.manager.send_general_alert(
-                f"2FA {status.capitalize()}",
-                f"Login attempt from {ip} was {action_text}",
+                f"אימות דו-שלבי {status_heb}",
+                f"ניסיון כניסה מ-{ip} {action_text}",
                 "success" if status == 'approved' else "warning"
             )
 
@@ -221,34 +222,34 @@ class CallbackHandler:
 
         except Exception as e:
             logger.error(f"Error handling 2FA response: {e}")
-            await query.edit_message_text("❌ Failed to process 2FA response")
+            await query.edit_message_text("❌ נכשל בעיבוד תגובת האימות הדו-שלבי")
 
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""
         await update.message.reply_text(
-            "🔐 SSH Telegram Monitor with 2FA Active\n\n"
-            "This bot monitors SSH access and provides 2FA authentication.\n"
-            "Configure group ID and topics in your .env file."
+            "🔐 מערכת ניטור SSH עם אימות דו-שלבי פעילה\n\n"
+            "הבוט מנטר גישות SSH ומספק אימות דו-שלבי.\n"
+            "הגדר את מזהה הקבוצה והנושאים בקובץ .env שלך."
         )
 
     async def init_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /init command to create topics"""
         if update.effective_chat.id != self.group_id:
-            await update.message.reply_text("This command must be run in the configured group.")
+            await update.message.reply_text("הפקודה חייבת לרוץ בקבוצה המוגדרת.")
             return
 
-        await update.message.reply_text("Initializing group topics...")
+        await update.message.reply_text("מאתחל נושאים בקבוצה...")
         success = await self.manager.initialize()
 
         if success:
             await update.message.reply_text(
-                "✅ Group initialized successfully!\n"
-                "Topics have been created for different notification types."
+                "✅ הקבוצה אותחלה בהצלחה!\n"
+                "נושאים נוצרו עבור סוגי התראות שונים."
             )
         else:
             await update.message.reply_text(
-                "❌ Failed to initialize group.\n"
-                "Please ensure the bot is admin and group has forums enabled."
+                "❌ נכשל באתחול הקבוצה.\n"
+                "ודא שהבוט הוא מנהל ושהנושאים מופעלים בקבוצה."
             )
 
 def main():

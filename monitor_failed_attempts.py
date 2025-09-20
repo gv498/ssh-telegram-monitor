@@ -142,8 +142,8 @@ class FailedAttemptsMonitor:
 
             # Send general alert
             await self.manager.send_general_alert(
-                "Auto-Block Triggered",
-                f"IP {ip} has been automatically blocked after {count} failed attempts",
+                "חסימה אוטומטית הופעלה",
+                f"כתובת IP {ip} נחסמה אוטומטית לאחר {count} ניסיונות כושלים",
                 "warning"
             )
 

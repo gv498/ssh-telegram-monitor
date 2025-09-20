@@ -76,10 +76,10 @@ class SSH2FAHandler:
             response = requests.get(f'http://ip-api.com/json/{ip}', timeout=2)
             data = response.json()
             if data.get('status') == 'success':
-                return f"{data.get('city', 'Unknown')}, {data.get('country', 'Unknown')}"
+                return f"{data.get('city', 'לא ידוע')}, {data.get('country', 'לא ידוע')}"
         except:
             pass
-        return "Unknown Location"
+        return "מיקום לא ידוע"
 
     async def request_2fa_approval(self, user: str, ip: str, ssh_pid: int) -> bool:
         """Request 2FA approval for SSH login"""
@@ -127,8 +127,8 @@ class SSH2FAHandler:
 
         # Send timeout notification
         await self.manager.send_general_alert(
-            "2FA Timeout",
-            f"Login attempt from {user}@{ip} was denied due to timeout",
+            "תם הזמן לאימות דו-שלבי",
+            f"ניסיון כניסה מ-{user}@{ip} נדחה עקב תום זמן המתנה",
             "warning"
         )
 
