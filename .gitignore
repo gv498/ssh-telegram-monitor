@@ -1,0 +1,46 @@
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# Secrets
+**/telegram_chat_id.txt
+**/*_token.txt
+**/*_secret*
+
+# Runtime files
+*.pid
+*.log
+*.db
+*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# System
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Backup
+*.bak
+*.backup
+*.old
+
+# Temporary
+/tmp/
+/temp/
