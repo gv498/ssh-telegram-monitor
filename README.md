@@ -1,5 +1,11 @@
 # SSH Telegram Monitor 🔐
 
+![GitHub stars](https://img.shields.io/github/stars/SHLOMO77018/ssh-telegram-monitor)
+![GitHub release](https://img.shields.io/github/v/release/SHLOMO77018/ssh-telegram-monitor)
+![License](https://img.shields.io/github/license/SHLOMO77018/ssh-telegram-monitor)
+![GitHub issues](https://img.shields.io/github/issues/SHLOMO77018/ssh-telegram-monitor)
+![GitHub forks](https://img.shields.io/github/forks/SHLOMO77018/ssh-telegram-monitor)
+
 Real-time SSH authentication monitoring and automated blocking system with Telegram notifications for Linux servers.
 
 ## Features 🚀
@@ -39,7 +45,7 @@ Real-time SSH authentication monitoring and automated blocking system with Teleg
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/ssh-telegram-monitor.git
+git clone https://github.com/SHLOMO77018/ssh-telegram-monitor.git
 cd ssh-telegram-monitor
 ```
 
@@ -242,8 +248,8 @@ Created with ❤️ for server security
 
 ## Support 💬
 
-- Issues: [GitHub Issues](https://github.com/yourusername/ssh-telegram-monitor/issues)
-- Telegram: @YourUsername
+- Issues: [GitHub Issues](https://github.com/SHLOMO77018/ssh-telegram-monitor/issues)
+- Discussions: [GitHub Discussions](https://github.com/SHLOMO77018/ssh-telegram-monitor/discussions)
 
 ## Changelog 📝
 
