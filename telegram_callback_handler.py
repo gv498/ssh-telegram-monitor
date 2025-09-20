@@ -374,6 +374,140 @@ class CallbackHandler:
 
         await update.message.reply_text(status_message)
 
+    async def unblock_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /unblock command to unblock IP addresses"""
+        # Check if IP was provided
+        if not context.args:
+            # Show list of blocked IPs
+            blocked_file = '/var/lib/ssh-monitor/blocked_ips.json'
+            blocked_ips = {}
+            if os.path.exists(blocked_file):
+                try:
+                    with open(blocked_file, 'r') as f:
+                        blocked_ips = json.load(f)
+                except:
+                    pass
+
+            if blocked_ips:
+                message = "🚫 **כתובות IP חסומות:**\n\n"
+                for ip, info in blocked_ips.items():
+                    timestamp = info.get('timestamp', 'לא ידוע')
+                    reason = info.get('reason', 'לא ידועה')
+                    message += f"• `{ip}`\n  📅 {timestamp}\n  📝 סיבה: {reason}\n\n"
+
+                message += "**לביטול חסימה:** /unblock [IP]\n"
+                message += "**לביטול כל החסימות:** /unblock all"
+            else:
+                message = "✅ אין כתובות IP חסומות כרגע"
+
+            await update.message.reply_text(message, parse_mode='Markdown')
+            return
+
+        ip_to_unblock = context.args[0]
+
+        # Handle "all" parameter to unblock all IPs
+        if ip_to_unblock.lower() == 'all':
+            blocked_file = '/var/lib/ssh-monitor/blocked_ips.json'
+            blocked_ips = {}
+            if os.path.exists(blocked_file):
+                try:
+                    with open(blocked_file, 'r') as f:
+                        blocked_ips = json.load(f)
+                except:
+                    pass
+
+            if not blocked_ips:
+                await update.message.reply_text("✅ אין כתובות IP חסומות לביטול")
+                return
+
+            count = 0
+            for ip in list(blocked_ips.keys()):
+                try:
+                    # Unblock the IP
+                    subprocess.run(f"/usr/local/bin/unblock_ip_complete.sh {ip}",
+                                 shell=True, check=False,
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    count += 1
+                except:
+                    pass
+
+            # Clear blocked IPs file
+            with open(blocked_file, 'w') as f:
+                json.dump({}, f)
+
+            await update.message.reply_text(f"✅ בוטלה חסימה של {count} כתובות IP")
+            await self.manager.send_general_alert(
+                "ביטול כל החסימות",
+                f"בוטלה חסימה של {count} כתובות IP",
+                "success"
+            )
+            return
+
+        # Validate IP format
+        import re
+        ip_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
+        if not re.match(ip_pattern, ip_to_unblock):
+            await update.message.reply_text("❌ פורמט IP לא תקין. דוגמה: /unblock 192.168.1.100")
+            return
+
+        # Unblock the specific IP
+        try:
+            # Execute unblocking script
+            subprocess.run(f"/usr/local/bin/unblock_ip_complete.sh {ip_to_unblock}",
+                         shell=True, check=False,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            # Update blocked IPs database
+            blocked_file = '/var/lib/ssh-monitor/blocked_ips.json'
+            if os.path.exists(blocked_file):
+                try:
+                    with open(blocked_file, 'r') as f:
+                        blocked_ips = json.load(f)
+                    if ip_to_unblock in blocked_ips:
+                        del blocked_ips[ip_to_unblock]
+                    with open(blocked_file, 'w') as f:
+                        json.dump(blocked_ips, f, indent=2)
+                except:
+                    pass
+
+            await update.message.reply_text(f"✅ כתובת IP {ip_to_unblock} שוחררה מחסימה בהצלחה")
+
+            # Send notification to general topic
+            await self.manager.send_general_alert(
+                "IP שוחרר",
+                f"כתובת IP {ip_to_unblock} שוחררה מחסימה דרך פקודה",
+                "success"
+            )
+
+        except Exception as e:
+            logger.error(f"Error unblocking IP {ip_to_unblock}: {e}")
+            await update.message.reply_text(f"❌ שגיאה בביטול חסימה של {ip_to_unblock}")
+
+    async def blocked_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /blocked command to show blocked IPs"""
+        blocked_file = '/var/lib/ssh-monitor/blocked_ips.json'
+        blocked_ips = {}
+        if os.path.exists(blocked_file):
+            try:
+                with open(blocked_file, 'r') as f:
+                    blocked_ips = json.load(f)
+            except:
+                pass
+
+        if blocked_ips:
+            message = "🚫 **כתובות IP חסומות:**\n\n"
+            for ip, info in blocked_ips.items():
+                timestamp = info.get('timestamp', 'לא ידוע')
+                reason = info.get('reason', 'לא ידועה')
+                message += f"• `{ip}`\n  📅 {timestamp}\n  📝 סיבה: {reason}\n\n"
+
+            message += "**לביטול חסימה:** /unblock [IP]\n"
+            message += "**לביטול כל החסימות:** /unblock all"
+        else:
+            message = "✅ אין כתובות IP חסומות כרגע"
+
+        await update.message.reply_text(message, parse_mode='Markdown')
+
 def main():
     """Main function to run the bot"""
     handler = CallbackHandler()
@@ -389,6 +523,8 @@ def main():
     application.add_handler(CommandHandler("enable2fa", handler.enable_2fa_command))
     application.add_handler(CommandHandler("disable2fa", handler.disable_2fa_command))
     application.add_handler(CommandHandler("status", handler.status_command))
+    application.add_handler(CommandHandler("unblock", handler.unblock_command))
+    application.add_handler(CommandHandler("blocked", handler.blocked_command))
 
     # Run bot
     logger.info("Starting Telegram callback handler...")
