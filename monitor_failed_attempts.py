@@ -79,32 +79,42 @@ class FailedAttemptsMonitor:
     def block_ip(self, ip: str):
         """Block an IP address"""
         if ip in self.blocked_ips:
+            logger.info(f"IP {ip} already blocked, skipping")
             return
 
         logger.info(f"Blocking IP: {ip}")
 
-        # Execute blocking commands
+        # Execute blocking commands - use REJECT for immediate response
         commands = [
-            f"iptables -A INPUT -s {ip} -j DROP",
-            f"ip6tables -A INPUT -s {ip} -j DROP 2>/dev/null",
+            # Use REJECT instead of DROP for immediate rejection
+            f"iptables -I INPUT -s {ip} -p tcp --dport 22 -j REJECT --reject-with tcp-reset",
+            f"ip6tables -I INPUT -s {ip} -p tcp --dport 22 -j REJECT --reject-with tcp-reset 2>/dev/null",
             f"ufw insert 1 deny from {ip} to any",
             f"fail2ban-client set sshd banip {ip}",
             f"/usr/local/bin/kill_ssh_sessions.sh {ip}"
         ]
 
+        success = False
         for cmd in commands:
             try:
-                subprocess.run(cmd, shell=True, check=False,
-                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            except:
-                pass
+                result = subprocess.run(cmd, shell=True, check=False,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                if 'iptables' in cmd and result.returncode == 0:
+                    success = True
+                    logger.info(f"Successfully executed: {cmd}")
+            except Exception as e:
+                logger.error(f"Failed to execute {cmd}: {e}")
 
-        # Update blocked IPs
-        self.blocked_ips[ip] = {
-            'timestamp': datetime.now().isoformat(),
-            'reason': 'max_failed_attempts'
-        }
-        self.save_blocked()
+        if success:
+            # Update blocked IPs
+            self.blocked_ips[ip] = {
+                'timestamp': datetime.now().isoformat(),
+                'reason': 'max_failed_attempts'
+            }
+            self.save_blocked()
+            logger.info(f"IP {ip} successfully blocked and saved to database")
+        else:
+            logger.error(f"Failed to block IP {ip} properly")
 
     async def process_failed_attempt(self, ip: str, user: str):
         """Process a failed login attempt"""
