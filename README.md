@@ -11,15 +11,29 @@ Real-time SSH authentication monitoring and automated blocking system with Teleg
 ## Features 🚀
 
 - **Real-time SSH Monitoring**: Instant notifications for successful and failed SSH login attempts
-- **Auto-blocking**: Automatically blocks IPs after 3 failed attempts
-- **Telegram Integration**:
-  - Live notifications with detailed information
-  - Interactive buttons for immediate blocking/unblocking
-  - Geographic location and ISP information
+- **Auto-blocking**: Automatically blocks IPs after configurable failed attempts
+- **Advanced User Management Interface**:
+  - Full system user management via Telegram buttons
+  - Create/delete users directly from Telegram
+  - Per-user 2FA and Fail2Ban settings
+  - SSH key management (add/remove/view)
+- **Interactive Telegram UI (Pyrogram-based)**:
+  - Lightning-fast button responses
+  - Hebrew interface with intuitive navigation
+  - Real-time dashboard with system stats
+  - Service management controls
+- **2FA Authentication System**:
+  - PAM-integrated two-factor authentication
+  - Per-user 2FA configuration
+  - 30-second approval timeout
+  - Instant session termination for denied logins
+- **Telegram Group with Topics**:
+  - Organized notifications in 5 different topics/threads
+  - Separate channels for different event types
 - **Multi-layer Security**:
   - Fail2ban integration
   - UFW firewall rules
-  - iptables direct rules
+  - iptables direct rules with tcp-reset
   - Active session termination
 - **Smart Tracking**:
   - Database of blocked IPs
@@ -56,7 +70,7 @@ apt update
 apt install -y python3-pip fail2ban ufw conntrack python3-psutil
 
 # Python packages
-pip3 install requests psutil
+pip3 install requests psutil pyrogram tgcrypto python-telegram-bot python-dotenv
 ```
 
 ### 3. Create Telegram Bot
@@ -128,15 +142,38 @@ python3 scripts/get_telegram_chat_id.py
 
 ## Usage 📱
 
+### Main Menu System
+Send `/menu` to access the interactive control panel with:
+- 🎛 **Dashboard** - Real-time system status and statistics
+- 👥 **User Management** - Create/delete users, manage SSH keys
+- 🔐 **Security Settings** - Configure 2FA and Fail2Ban
+- 🚫 **Block Management** - View and unblock IPs
+- 📊 **Statistics** - Detailed login and security stats
+- ⚙️ **System Settings** - Restart services and system controls
+
 ### Telegram Commands
+- `/menu` - Open main control panel
+- `/adduser <username> [password]` - Create new system user
+- `/addkey <username> <ssh-key>` - Add SSH public key
 - `/block <IP>` - Manually block an IP
 - `/unblock <IP>` - Unblock an IP
+- `/enable2fa` - Enable global 2FA
+- `/disable2fa` - Disable global 2FA
+- `/status` - View system status
+
+### User Management Features
+- **Create/Delete Users**: Full system user management
+- **SSH Key Management**: Add, remove, view SSH keys per user
+- **Per-User 2FA**: Enable/disable 2FA for specific users
+- **Per-User Fail2Ban**: Configure auto-blocking per user
+- **Password Management**: Set/reset user passwords
 
 ### Interactive Buttons
 Each notification includes:
+- **✅ Approve / ❌ Deny** - For 2FA requests
 - **🚫 Block IP** - Immediately block and disconnect
 - **🔓 Unblock** - Remove all blocks
-- **📊 More Info** - Get server statistics
+- **📊 More Info** - Get detailed information
 
 ### Service Management
 ```bash
@@ -253,7 +290,25 @@ Created with ❤️ for server security
 
 ## Changelog 📝
 
-### v2.0.0 (Latest)
+### v3.0.0 (Latest)
+- **NEW: Complete UI Overhaul with Pyrogram**
+  - Lightning-fast button responses (10x faster)
+  - Full Hebrew interface
+  - Comprehensive menu system
+- **NEW: Advanced User Management**
+  - Create/delete system users from Telegram
+  - Manage SSH keys per user
+  - Per-user 2FA and Fail2Ban settings
+- **NEW: Interactive Dashboard**
+  - Real-time system statistics
+  - Service management controls
+  - Blocked IPs management with unblock buttons
+- **IMPROVED: 2FA System**
+  - PAM integration for reliable authentication
+  - Per-user configuration
+  - Better session handling
+
+### v2.0.0
 - **NEW: Telegram Group Topics Support**
   - Organized notifications in 5 different topics/threads
   - Separate channels for successful logins, failed attempts, session ends, 2FA, and general alerts

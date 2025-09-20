@@ -218,6 +218,25 @@ async def handle_ssh_login(user: str, ip: str, pid: int):
     """Handle SSH login with 2FA"""
     handler = SSH2FAHandler()
 
+    # Load configuration
+    config_file = '/var/lib/ssh-monitor/2fa_config.json'
+    if os.path.exists(config_file):
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+            if not config.get('enabled', True):
+                logger.info("2FA disabled globally")
+                return True
+
+    # Check per-user 2FA settings
+    user_settings_file = '/var/lib/ssh-monitor/user_2fa_settings.json'
+    if os.path.exists(user_settings_file):
+        with open(user_settings_file, 'r') as f:
+            user_settings = json.load(f)
+            user_setting = user_settings.get(user, {})
+            if not user_setting.get('2fa_enabled', True):
+                logger.info(f"2FA disabled for user {user}")
+                return True
+
     if handler.check_2fa_required(ip):
         logger.info(f"2FA required for {user}@{ip}")
         approved = await handler.request_2fa_approval(user, ip, pid)
@@ -243,6 +262,8 @@ if __name__ == "__main__":
         ip = sys.argv[2]
         pid = int(sys.argv[3])
 
-        asyncio.run(handle_ssh_login(user, ip, pid))
+        result = asyncio.run(handle_ssh_login(user, ip, pid))
+        sys.exit(0 if result else 1)
     else:
         print("Usage: ssh_2fa_handler.py <user> <ip> <pid>")
+        sys.exit(1)
