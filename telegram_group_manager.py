@@ -1,0 +1,259 @@
+#!/usr/bin/env python3
+import os
+import json
+import asyncio
+import logging
+from typing import Optional, Dict, Any
+from telegram import Bot, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.error import TelegramError
+from dotenv import load_dotenv
+from datetime import datetime
+
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+class TelegramGroupManager:
+    def __init__(self):
+        self.bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        self.group_id = int(os.getenv('TELEGRAM_GROUP_ID', '-1003066710155'))
+        self.bot = Bot(token=self.bot_token)
+
+        # Topic IDs storage
+        self.topics_file = '/var/lib/ssh-monitor/telegram_topics.json'
+        self.topics = self.load_topics()
+
+        # Topic names and descriptions
+        self.topic_config = {
+            'successful_logins': {
+                'name': '✅ Successful Logins',
+                'description': 'Successful SSH login notifications'
+            },
+            'failed_logins': {
+                'name': '❌ Failed Logins',
+                'description': 'Failed SSH login attempts and auto-blocks'
+            },
+            'session_end': {
+                'name': '🚪 Session End',
+                'description': 'SSH session termination notifications'
+            },
+            '2fa_approval': {
+                'name': '🔐 2FA Approval',
+                'description': 'Two-factor authentication approval requests'
+            },
+            'general': {
+                'name': '📢 General',
+                'description': 'General system notifications and alerts'
+            }
+        }
+
+    def load_topics(self) -> Dict[str, int]:
+        """Load saved topic IDs from file"""
+        os.makedirs(os.path.dirname(self.topics_file), exist_ok=True)
+        if os.path.exists(self.topics_file):
+            try:
+                with open(self.topics_file, 'r') as f:
+                    return json.load(f)
+            except:
+                pass
+        return {}
+
+    def save_topics(self):
+        """Save topic IDs to file"""
+        with open(self.topics_file, 'w') as f:
+            json.dump(self.topics, f, indent=2)
+
+    async def create_topics(self):
+        """Create forum topics in the Telegram group"""
+        try:
+            # Check if group is a forum
+            chat = await self.bot.get_chat(self.group_id)
+            if not chat.is_forum:
+                logger.error(f"Group {self.group_id} is not a forum. Please enable forum mode in group settings.")
+                return False
+
+            # Create topics
+            for topic_key, config in self.topic_config.items():
+                if topic_key not in self.topics:
+                    try:
+                        # Create forum topic
+                        result = await self.bot.create_forum_topic(
+                            chat_id=self.group_id,
+                            name=config['name']
+                        )
+                        self.topics[topic_key] = result.message_thread_id
+                        logger.info(f"Created topic '{config['name']}' with ID {result.message_thread_id}")
+
+                        # Send initial message to topic
+                        await self.send_to_topic(
+                            topic_key,
+                            f"📌 **Topic: {config['name']}**\n\n{config['description']}"
+                        )
+                    except TelegramError as e:
+                        logger.error(f"Failed to create topic {topic_key}: {e}")
+
+            # Save topic IDs
+            self.save_topics()
+            return True
+
+        except Exception as e:
+            logger.error(f"Error creating topics: {e}")
+            return False
+
+    async def send_to_topic(self, topic_key: str, message: str, reply_markup=None, parse_mode='Markdown'):
+        """Send message to specific topic"""
+        if topic_key not in self.topics:
+            logger.error(f"Topic {topic_key} not found")
+            return None
+
+        try:
+            result = await self.bot.send_message(
+                chat_id=self.group_id,
+                message_thread_id=self.topics[topic_key],
+                text=message,
+                parse_mode=parse_mode,
+                reply_markup=reply_markup
+            )
+            return result
+        except Exception as e:
+            logger.error(f"Failed to send message to topic {topic_key}: {e}")
+            return None
+
+    async def send_successful_login(self, user: str, ip: str, location: str, details: Dict):
+        """Send successful login notification"""
+        message = f"""✅ **Successful SSH Login**
+
+👤 User: `{user}`
+🌐 IP: `{ip}`
+📍 Location: {location}
+🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+**System Info:**
+CPU: {details.get('cpu', 'N/A')}%
+Memory: {details.get('memory', 'N/A')}%
+Disk: {details.get('disk', 'N/A')}%
+"""
+
+        keyboard = [
+            [
+                InlineKeyboardButton("🚫 Block IP", callback_data=f"block:{ip}"),
+                InlineKeyboardButton("👁 View Sessions", callback_data=f"sessions:{ip}")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await self.send_to_topic('successful_logins', message, reply_markup)
+
+    async def send_failed_login(self, user: str, ip: str, attempts: int, blocked: bool = False):
+        """Send failed login notification"""
+        status = "🚫 **AUTO-BLOCKED**" if blocked else "⚠️ Warning"
+
+        message = f"""❌ **Failed SSH Login Attempt**
+
+Status: {status}
+👤 User: `{user}`
+🌐 IP: `{ip}`
+🔢 Attempts: {attempts}
+🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+
+        if not blocked:
+            keyboard = [
+                [
+                    InlineKeyboardButton("🚫 Block Now", callback_data=f"block:{ip}"),
+                    InlineKeyboardButton("📊 View History", callback_data=f"history:{ip}")
+                ]
+            ]
+        else:
+            keyboard = [
+                [
+                    InlineKeyboardButton("🔓 Unblock", callback_data=f"unblock:{ip}"),
+                    InlineKeyboardButton("📊 View History", callback_data=f"history:{ip}")
+                ]
+            ]
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await self.send_to_topic('failed_logins', message, reply_markup)
+
+    async def send_session_end(self, user: str, ip: str, duration: str):
+        """Send session end notification"""
+        message = f"""🚪 **SSH Session Ended**
+
+👤 User: `{user}`
+🌐 IP: `{ip}`
+⏱ Duration: {duration}
+🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+
+        await self.send_to_topic('session_end', message)
+
+    async def send_2fa_request(self, user: str, ip: str, location: str, session_id: str):
+        """Send 2FA approval request"""
+        message = f"""🔐 **2FA Authentication Required**
+
+⚠️ SSH login attempt requires approval
+
+👤 User: `{user}`
+🌐 IP: `{ip}`
+📍 Location: {location}
+🆔 Session: `{session_id}`
+🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+**This login will be blocked unless approved within 30 seconds**
+"""
+
+        keyboard = [
+            [
+                InlineKeyboardButton("✅ Approve", callback_data=f"2fa_approve:{session_id}:{ip}"),
+                InlineKeyboardButton("❌ Deny", callback_data=f"2fa_deny:{session_id}:{ip}")
+            ],
+            [
+                InlineKeyboardButton("🚫 Deny & Block", callback_data=f"2fa_block:{session_id}:{ip}")
+            ]
+        ]
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        result = await self.send_to_topic('2fa_approval', message, reply_markup)
+        return result.message_id if result else None
+
+    async def send_general_alert(self, title: str, message: str, severity: str = 'info'):
+        """Send general system alert"""
+        emoji = {
+            'info': 'ℹ️',
+            'warning': '⚠️',
+            'error': '❌',
+            'success': '✅'
+        }.get(severity, '📢')
+
+        full_message = f"""{emoji} **{title}**
+
+{message}
+
+🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+
+        await self.send_to_topic('general', full_message)
+
+    async def initialize(self):
+        """Initialize group and create topics"""
+        logger.info("Initializing Telegram group manager...")
+        success = await self.create_topics()
+        if success:
+            await self.send_general_alert(
+                "System Initialized",
+                "SSH Telegram Monitor with 2FA is now active and monitoring",
+                "success"
+            )
+        return success
+
+async def main():
+    """Main function for testing"""
+    manager = TelegramGroupManager()
+    await manager.initialize()
+
+if __name__ == "__main__":
+    asyncio.run(main())

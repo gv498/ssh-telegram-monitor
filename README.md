@@ -253,12 +253,60 @@ Created with ❤️ for server security
 
 ## Changelog 📝
 
+### v2.0.0 (Latest)
+- **NEW: Telegram Group Topics Support**
+  - Organized notifications in 5 different topics/threads
+  - Separate channels for successful logins, failed attempts, session ends, 2FA, and general alerts
+- **NEW: 2FA Authentication System**
+  - Real-time approval/deny for SSH logins via Telegram
+  - 30-second timeout for 2FA requests
+  - Instant session termination for denied logins
+- **Improved: Enhanced callback handling**
+  - Better button response handling
+  - More detailed session information
+- **Added: Session end notifications**
+  - Track when users disconnect from SSH
+
 ### v1.0.0
 - Initial release
 - Basic monitoring and notifications
 - Auto-blocking after 3 attempts
 - Interactive Telegram buttons
 - Multi-layer security implementation
+
+## Setup Telegram Group with Topics 🏢
+
+### Prerequisites for Group Features:
+1. Create a Telegram group (not a channel)
+2. Add your bot as administrator with these permissions:
+   - Delete messages
+   - Pin messages
+   - Manage topics
+3. **Enable Forums/Topics in group settings:**
+   - Go to Group Info → Edit → Toggle "Topics" ON
+4. Get your group ID (it will look like `-1003066710155`)
+
+### Configure Group Features:
+```bash
+# Edit .env file
+TELEGRAM_GROUP_ID=-1003066710155
+2FA_ENABLED=true
+2FA_TIMEOUT=30
+```
+
+### Initialize Topics:
+After enabling forums in your group:
+```bash
+# Run in the group chat
+/init
+```
+
+This will create 5 topics:
+- ✅ **Successful Logins** - All successful SSH authentications
+- ❌ **Failed Logins** - Failed attempts and auto-blocks
+- 🚪 **Session End** - Notifications when SSH sessions end
+- 🔐 **2FA Approval** - Two-factor authentication requests
+- 📢 **General** - System alerts and general notifications
 
 ---
 
