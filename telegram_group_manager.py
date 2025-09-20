@@ -3,6 +3,8 @@ import os
 import json
 import asyncio
 import logging
+import socket
+import subprocess
 from typing import Optional, Dict, Any
 from telegram import Bot, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.error import TelegramError
@@ -67,6 +69,47 @@ class TelegramGroupManager:
         with open(self.topics_file, 'w') as f:
             json.dump(self.topics, f, indent=2)
 
+    def get_server_ip(self) -> str:
+        """Get the server's public IP address"""
+        try:
+            # Try multiple methods to get public IP
+            methods = [
+                "curl -s ifconfig.me",
+                "curl -s icanhazip.com",
+                "curl -s ipinfo.io/ip",
+                "curl -s api.ipify.org"
+            ]
+
+            for cmd in methods:
+                try:
+                    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=5)
+                    if result.returncode == 0 and result.stdout.strip():
+                        return result.stdout.strip()
+                except:
+                    continue
+
+            # Fallback to hostname
+            return socket.gethostname()
+        except:
+            return "Unknown"
+
+    async def rename_group(self):
+        """Rename the group to include server IP"""
+        try:
+            server_ip = self.get_server_ip()
+            new_title = f"לוגים SSH של שרת {server_ip}"
+
+            # Set chat title
+            await self.bot.set_chat_title(
+                chat_id=self.group_id,
+                title=new_title
+            )
+            logger.info(f"Group renamed to: {new_title}")
+            return True
+        except TelegramError as e:
+            logger.error(f"Failed to rename group: {e}")
+            return False
+
     async def create_topics(self):
         """Create forum topics in the Telegram group"""
         try:
@@ -75,6 +118,9 @@ class TelegramGroupManager:
             if not chat.is_forum:
                 logger.error(f"Group {self.group_id} is not a forum. Please enable forum mode in group settings.")
                 return False
+
+            # Rename group first
+            await self.rename_group()
 
             # Create topics
             for topic_key, config in self.topic_config.items():
@@ -239,13 +285,28 @@ Status: {status}
         await self.send_to_topic('general', full_message)
 
     async def initialize(self):
-        """Initialize group and create topics"""
+        """Initialize group, rename it, and create topics"""
         logger.info("Initializing Telegram group manager...")
+
+        # First check if group exists and is accessible
+        try:
+            chat = await self.bot.get_chat(self.group_id)
+            logger.info(f"Found group: {chat.title}")
+        except TelegramError as e:
+            logger.error(f"Cannot access group {self.group_id}: {e}")
+            logger.error("Please ensure:")
+            logger.error("1. The bot is added to the group")
+            logger.error("2. The bot has admin privileges")
+            logger.error("3. The group ID is correct")
+            return False
+
+        # Create topics (will also rename group)
         success = await self.create_topics()
         if success:
+            server_ip = self.get_server_ip()
             await self.send_general_alert(
                 "System Initialized",
-                "SSH Telegram Monitor with 2FA is now active and monitoring",
+                f"SSH Telegram Monitor with 2FA is now active\n\nServer IP: {server_ip}\nGroup configured successfully",
                 "success"
             )
         return success

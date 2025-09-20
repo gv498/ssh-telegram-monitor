@@ -92,6 +92,11 @@ systemctl restart telegram-callback-handler.service
 
 # Initialize Telegram group topics
 echo "Initializing Telegram group topics..."
+echo "The bot will:"
+echo "  1. Rename your group to include server IP"
+echo "  2. Create 5 organized topics for different notifications"
+echo "  3. Configure the monitoring system"
+echo ""
 python3 /usr/local/bin/telegram_group_manager.py
 
 echo ""
