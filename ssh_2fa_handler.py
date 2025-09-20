@@ -83,6 +83,23 @@ class SSH2FAHandler:
 
     async def request_2fa_approval(self, user: str, ip: str, ssh_pid: int) -> bool:
         """Request 2FA approval for SSH login"""
+        # First check if IP is already blocked
+        blocked_file = '/var/lib/ssh-monitor/blocked_ips.json'
+        if os.path.exists(blocked_file):
+            try:
+                with open(blocked_file, 'r') as f:
+                    blocked_ips = json.load(f)
+                    if ip in blocked_ips:
+                        logger.warning(f"Blocked IP {ip} attempted to connect - denying immediately")
+                        # Kill the SSH session immediately
+                        try:
+                            subprocess.run(f"kill -9 {ssh_pid}", shell=True, check=False)
+                        except:
+                            pass
+                        return False
+            except:
+                pass
+
         session_id = str(uuid.uuid4())[:8]
         location = self.get_location(ip)
 
@@ -117,13 +134,26 @@ class SSH2FAHandler:
                     if status == 'blocked':
                         self.block_ip(ip)
                     self.cleanup_session(session_id)
+                    # Kill the SSH session immediately when denied
+                    try:
+                        subprocess.run(f"kill -9 {ssh_pid}", shell=True, check=False)
+                        logger.info(f"Killed SSH session PID {ssh_pid} for denied login")
+                    except:
+                        pass
                     return False
 
             await asyncio.sleep(1)
 
-        # Timeout - deny access
+        # Timeout - deny access and kill session
         logger.warning(f"2FA timeout for session {session_id}")
         self.cleanup_session(session_id)
+
+        # Kill the SSH session on timeout
+        try:
+            subprocess.run(f"kill -9 {ssh_pid}", shell=True, check=False)
+            logger.info(f"Killed SSH session PID {ssh_pid} due to timeout")
+        except:
+            pass
 
         # Send timeout notification
         await self.manager.send_general_alert(
