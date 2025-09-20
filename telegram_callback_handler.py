@@ -299,6 +299,81 @@ class CallbackHandler:
                 "warning"
             )
 
+    async def enable_2fa_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /enable2fa command"""
+        config_file = '/var/lib/ssh-monitor/2fa_config.json'
+        os.makedirs(os.path.dirname(config_file), exist_ok=True)
+
+        # Enable 2FA
+        with open(config_file, 'w') as f:
+            json.dump({'enabled': True}, f)
+
+        await update.message.reply_text(
+            "🔐 **אימות דו-שלבי הופעל**\n\n"
+            "כל ניסיון התחברות SSH ידרוש אישור דרך טלגרם."
+        )
+        await self.manager.send_general_alert(
+            "אימות דו-שלבי הופעל",
+            "המערכת תדרוש אישור לכל התחברות SSH",
+            "success"
+        )
+
+    async def disable_2fa_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /disable2fa command"""
+        config_file = '/var/lib/ssh-monitor/2fa_config.json'
+        os.makedirs(os.path.dirname(config_file), exist_ok=True)
+
+        # Disable 2FA
+        with open(config_file, 'w') as f:
+            json.dump({'enabled': False}, f)
+
+        await update.message.reply_text(
+            "⚠️ **אימות דו-שלבי כובה**\n\n"
+            "התחברויות SSH לא ידרשו אישור.\n"
+            "המערכת עדיין תשלח התראות.\n\n"
+            "🔄 להפעלה מחדש: /enable2fa"
+        )
+        await self.manager.send_general_alert(
+            "אימות דו-שלבי כובה",
+            "התחברויות SSH לא ידרשו יותר אישור",
+            "warning"
+        )
+
+    async def status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /status command"""
+        # Load 2FA state
+        config_file = '/var/lib/ssh-monitor/2fa_config.json'
+        twofa_enabled = True
+        if os.path.exists(config_file):
+            try:
+                with open(config_file, 'r') as f:
+                    config = json.load(f)
+                    twofa_enabled = config.get('enabled', True)
+            except:
+                pass
+
+        # Check services status
+        services = {
+            'ssh-telegram-monitor': 'ניטור SSH',
+            'telegram-callback-handler': 'מטפל פקודות',
+            'ssh-session-monitor': 'ניטור סיום חיבורים',
+            'ssh-failed-monitor': 'ניטור ניסיונות כושלים'
+        }
+
+        status_message = "📊 **סטטוס מערכת**\n\n"
+        status_message += f"🔐 אימות דו-שלבי: {'✅ פעיל' if twofa_enabled else '❌ כבוי'}\n\n"
+        status_message += "🔄 **שירותים:**\n"
+
+        for service, name in services.items():
+            try:
+                result = subprocess.run(f"systemctl is-active {service}", shell=True, capture_output=True, text=True)
+                is_active = result.stdout.strip() == 'active'
+                status_message += f"{'✅' if is_active else '❌'} {name}\n"
+            except:
+                status_message += f"❓ {name}\n"
+
+        await update.message.reply_text(status_message)
+
 def main():
     """Main function to run the bot"""
     handler = CallbackHandler()
@@ -311,6 +386,9 @@ def main():
     application.add_handler(CommandHandler("start", handler.start_command))
     application.add_handler(CommandHandler("init", handler.init_command))
     application.add_handler(CommandHandler("2fa", handler.twofa_command))
+    application.add_handler(CommandHandler("enable2fa", handler.enable_2fa_command))
+    application.add_handler(CommandHandler("disable2fa", handler.disable_2fa_command))
+    application.add_handler(CommandHandler("status", handler.status_command))
 
     # Run bot
     logger.info("Starting Telegram callback handler...")
