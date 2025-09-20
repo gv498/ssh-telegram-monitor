@@ -117,6 +117,21 @@ class TelegramGroupManager:
             chat = await self.bot.get_chat(self.group_id)
             if not chat.is_forum:
                 logger.error(f"Group {self.group_id} is not a forum. Please enable forum mode in group settings.")
+                # Send message to group about enabling forums
+                try:
+                    await self.bot.send_message(
+                        chat_id=self.group_id,
+                        text="⚠️ **נדרש להפעיל נושאים (Topics)**\n\n"
+                             "כדי שהבוט יוכל לעבוד כראוי, יש להפעיל נושאים בקבוצה:\n\n"
+                             "1. לחץ על שם הקבוצה למעלה\n"
+                             "2. לחץ על 'עריכה' (עיפרון)\n"
+                             "3. הפעל את 'נושאים' (Topics)\n"
+                             "4. שמור שינויים\n\n"
+                             "לאחר ההפעלה, הרץ שוב את הפקודה /init",
+                        parse_mode='Markdown'
+                    )
+                except:
+                    pass
                 return False
 
             # Rename group first
