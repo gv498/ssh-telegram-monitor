@@ -57,65 +57,69 @@ Real-time SSH authentication monitoring and automated blocking system with Teleg
 
 ## Installation 🛠️
 
-### 1. Clone the Repository
+### Quick Install (Recommended)
 ```bash
 git clone https://github.com/SHLOMO77018/ssh-telegram-monitor.git
 cd ssh-telegram-monitor
+sudo ./install_v3.sh
 ```
 
-### 2. Install Dependencies
+### Prerequisites
+
+1. **Create Telegram Bot:**
+   - Open Telegram and search for @BotFather
+   - Send `/newbot` and follow instructions
+   - Save your bot token
+
+2. **Create Telegram Group with Topics:**
+   - Create a new group in Telegram
+   - Go to Group Info → Edit → Enable "Topics"
+   - Add your bot as administrator with all permissions
+   - Get group ID (will be like `-100xxxxxxxxxx`)
+
+3. **Configure Environment:**
 ```bash
-# System packages
-apt update
-apt install -y python3-pip fail2ban ufw conntrack python3-psutil
-
-# Python packages
-pip3 install requests psutil pyrogram tgcrypto python-telegram-bot python-dotenv
-```
-
-### 3. Create Telegram Bot
-1. Open Telegram and search for @BotFather
-2. Send `/newbot` and follow instructions
-3. Save your bot token
-
-### 4. Configure Environment
-```bash
-# Copy example config
 cp .env.example .env
-
-# Edit with your credentials
 nano .env
-# Add your BOT_TOKEN and run get_telegram_chat_id.py to get CHAT_ID
 ```
 
-### 5. Run Setup Script
-```bash
-sudo ./install.sh
-```
+Required settings:
+- `BOT_TOKEN`: Your bot token from BotFather
+- `TELEGRAM_CHAT_ID`: Your personal chat ID
+- `GROUP_ID`: Your group ID with topics enabled
 
 ## Manual Installation 🔧
 
 ### 1. Copy Scripts
 ```bash
-cp scripts/* /usr/local/bin/
+cp *.py /usr/local/bin/
+cp *.sh /usr/local/bin/
 chmod +x /usr/local/bin/*.sh
 chmod +x /usr/local/bin/*.py
 ```
 
-### 2. Configure PAM
-Add to `/etc/pam.d/sshd`:
+### 2. Configure PAM for 2FA
+Edit `/etc/pam.d/sshd` and add after `@include common-auth`:
 ```bash
-session    optional     pam_exec.so seteuid /usr/local/bin/ssh_login_notify.sh
+# 2FA Authentication check
+auth required pam_exec.so quiet expose_authtok /usr/local/bin/ssh_2fa_check.sh
+```
+
+And at the end of the file:
+```bash
+session optional pam_exec.so seteuid /usr/local/bin/ssh_login_notify_v2.sh
 ```
 
 ### 3. Setup Systemd Services
 ```bash
-cp systemd/*.service /etc/systemd/system/
+# Create service files (see install_v3.sh for templates)
 systemctl daemon-reload
-systemctl enable ssh-telegram-monitor.service
-systemctl enable telegram-action-handler.service
-systemctl start ssh-telegram-monitor.service
-systemctl start telegram-action-handler.service
+systemctl enable telegram-ui-manager
+systemctl enable telegram-callback-handler
+systemctl enable ssh-failed-monitor
+systemctl start telegram-ui-manager
+systemctl start telegram-callback-handler
+systemctl start ssh-failed-monitor
 ```
 
 ### 4. Configure Fail2ban
@@ -128,8 +132,22 @@ systemctl restart fail2ban
 
 ### Environment Variables (.env)
 ```env
+# Bot credentials
 BOT_TOKEN=your_bot_token_here
-CHAT_ID=your_chat_id_here
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+TELEGRAM_CHAT_ID=your_chat_id_here
+
+# Group with topics
+GROUP_ID=-100your_group_id
+TELEGRAM_GROUP_ID=-100your_group_id
+
+# Pyrogram API (use defaults)
+API_ID=2040
+API_HASH=b18441a1ff607e10a989891a5462e627
+
+# Security
+2FA_ENABLED=true
+2FA_TIMEOUT=30
 MAX_ATTEMPTS=3
 BLOCK_DURATION_HOURS=24
 ```
